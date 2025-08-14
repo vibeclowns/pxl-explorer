@@ -354,12 +354,19 @@ class Graph extends React.Component {
         return;
       }
 
-      // Check for gene name variants in obs keys
+      // Check for gene name variants in obs keys (case-insensitive)
       const { schema } = annoMatrix;
       const obsKeys = schema?.dataframe?.obsIndex?.keys || [];
-      const geneNameVariants = ["gene_symbol", "gene_name", "Gene name"];
-      const geneField = geneNameVariants.find((variant) =>
-        obsKeys.includes(variant)
+      const geneNameVariants = [
+        "gene_symbol",
+        "gene_name",
+        "Gene name",
+        "Gene names",
+      ];
+      const geneField = obsKeys.find((key) =>
+        geneNameVariants.some(
+          (variant) => key.toLowerCase() === variant.toLowerCase()
+        )
       );
 
       // Always fetch observation index for fallback
