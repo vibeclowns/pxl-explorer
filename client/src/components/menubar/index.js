@@ -305,9 +305,7 @@ class MenuBar extends React.PureComponent {
               onClick={this.handleProteinHoverToggle}
               active={isProteinHoverEnabled}
               intent={isProteinHoverEnabled ? "primary" : "none"}
-              disabled={
-                !isColoredByCategorical || graphInteractionMode !== "zoom"
-              }
+              disabled={graphInteractionMode !== "zoom"}
             />
           </Tooltip>
         </ButtonGroup>
