@@ -329,9 +329,9 @@ class Graph extends React.Component {
    * @param {MouseEvent} event - The mouse event triggered by hovering over the graph.
    */
   handleProteinHover = async (event) => {
-    const { dispatch, annoMatrix, layoutChoice } = this.props;
+    const { dispatch, annoMatrix, layoutChoice, colors } = this.props;
 
-    if (!annoMatrix || !layoutChoice?.current) return;
+    if (!annoMatrix || !layoutChoice?.current || !colors?.colorAccessor) return;
 
     // Get the Regl (WebGL) canvas dimensions
     const rect = this.reglCanvas.getBoundingClientRect();
@@ -346,6 +346,14 @@ class Graph extends React.Component {
     const threshold = 0.002; // Fine adjustment for hover precision
 
     try {
+      // Determine the correct query for colorByQuery
+      const query = this.colorByQuery();
+
+      if (!query) {
+        console.error("❌ Invalid query for colorByQuery function.");
+        return;
+      }
+
       // Check for gene name variants in obs keys
       const { schema } = annoMatrix;
       const obsKeys = schema?.dataframe?.obsIndex?.keys || [];
@@ -357,8 +365,11 @@ class Graph extends React.Component {
       // Always fetch observation index for fallback
       const obsIndexName = schema?.annotations?.obs?.index;
 
-      // Prepare fetch promises
-      const promises = [annoMatrix.fetch("emb", layoutChoice.current)];
+      // Fetch the layout and color data using the query
+      const promises = [
+        annoMatrix.fetch("emb", layoutChoice.current),
+        annoMatrix.fetch(...query),
+      ];
 
       // Fetch gene data if available
       if (geneField) {
@@ -374,17 +385,16 @@ class Graph extends React.Component {
         promises.push(Promise.resolve(null));
       }
 
-      // Fetch the layout, gene data, and index data
-      const [layoutDf, geneDf, indexDf] = await Promise.all(promises);
+      const [layoutDf, colorDf, geneDf, indexDf] = await Promise.all(promises);
 
       const X = layoutDf.col(layoutChoice.currentDimNames[0]).asArray();
       const Y = layoutDf.col(layoutChoice.currentDimNames[1]).asArray();
-      const geneLabels = geneDf ? geneDf.col(geneField).asArray() : null;
-      const obsIndices = indexDf ? indexDf.col(obsIndexName).asArray() : null;
+      const labels = colorDf.col(colors.colorAccessor).asArray();
+      const geneLabels = geneDf?.col(geneField)?.asArray();
+      const obsIndices = indexDf?.col(obsIndexName)?.asArray();
 
-      let foundArrayIndex = null;
-      let foundGeneLabel = null;
-      let foundObsIndex = null;
+      let foundIndex = null;
+      let foundLabel = null;
       let foundCoordinates = null;
       let minDist = Infinity;
 
@@ -395,25 +405,24 @@ class Graph extends React.Component {
 
         if (dist < minDist) {
           minDist = dist;
-          foundArrayIndex = i;
-          foundGeneLabel = geneLabels ? geneLabels[i] : null;
-          foundObsIndex = obsIndices ? obsIndices[i] : i;
+          foundIndex = i;
+          foundLabel = labels[i];
           foundCoordinates = [X[i], Y[i]];
         }
       }
 
       // Dispatch hover actions
-      if (minDist < threshold && foundArrayIndex !== null && foundCoordinates) {
+      if (minDist < threshold && foundIndex !== null && foundCoordinates) {
         // Use gene label if available and not null/nan, otherwise use observation index
-        const displayLabel =
-          foundGeneLabel && foundGeneLabel !== "nan" && foundGeneLabel !== null
-            ? foundGeneLabel
-            : foundObsIndex;
+        const geneLabel = geneLabels?.[foundIndex];
+        const obsIndex = obsIndices?.[foundIndex] ?? foundIndex;
+        const rightSide =
+          geneLabel && geneLabel !== "nan" ? geneLabel : obsIndex;
 
         dispatch({
           type: "protein hover start",
           payload: {
-            protein: `${displayLabel} | ${foundObsIndex}`,
+            protein: `${foundLabel} | ${rightSide}`,
             coordinates: foundCoordinates,
           },
         });
