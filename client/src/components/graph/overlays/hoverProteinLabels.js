@@ -37,10 +37,33 @@ const HoverProteinLabels = ({
 
   return (
     <g id="hover-protein-label" transform={`translate(${x}, ${y})`}>
+      <defs>
+        <filter id="drop-shadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow
+            dx="0.2"
+            dy="0.2"
+            stdDeviation="0.2"
+            floodColor="rgba(0,0,0,0.5)"
+          />
+        </filter>
+      </defs>
+      <rect
+        transform={`scale(0.005, -0.005) ${inverseTransform}`}
+        x={-name.length * 0.6} // Adjust width based on text length
+        y="-5.6"
+        width={name.length * 1.2}
+        height="4.0"
+        fill="white"
+        stroke="rgba(0,0,0,0.1)"
+        strokeWidth="0.1"
+        rx="0.2"
+        filter="url(#drop-shadow)"
+        pointerEvents="none"
+      />
       <text
         transform={`scale(0.005, -0.005) ${inverseTransform}`}
         textAnchor="middle"
-        dy="-1" // Moves the text slightly above the point
+        dy="-3" // Moves the text further above the point
         style={{
           fontSize: "2px",
           fontWeight: "bold",
